@@ -117,9 +117,9 @@ endp
        push CX      
        push AX  
        cld
-       LACO:  
-         movsw
-         loop LACO 
+ 
+       rep movsw
+
        pop DI
        pop SI
        pop AX 
