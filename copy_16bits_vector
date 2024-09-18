@@ -1,0 +1,166 @@
+.model small
+
+.stack 100H   
+
+.data 
+    destino dw 5 dup(?)  
+    origem dw 5 dup(?)
+    CR EQU 13 ; 
+    LF EQU 10 ; 
+.code  
+
+
+LER_CHAR proc 
+    mov AH, 7
+    int 21H   
+    ret       
+endp
+    
+ESC_CHAR proc
+    push AX   
+    mov AH, 2
+    int 21H
+    pop AX     
+    ret  
+endp   
+
+ESC_UINT16 proc 
+    push AX      
+    push BX
+    push CX
+    push DX 
+       
+    mov BX, 10   
+    xor CX, CX   
+      
+LACO_DIV:
+    xor DX, DX   
+    div BX       
+    
+    push DX      
+    inc CX       
+     
+    cmp AX, 0    
+    jnz LACO_DIV 
+           
+ LACO_ESCDIG:   
+    pop DX       
+    add DL, '0'  
+    call ESC_CHAR               
+    loop LACO_ESCDIG    
+    
+    pop DX       
+    pop CX
+    pop BX
+    pop AX
+    ret     
+endp   
+
+LER_UINT16 proc  
+
+    push BX
+    push CX
+    push DX 
+
+    xor AX, AX 
+    xor CX, CX
+    mov BX, 10
+                
+LER_UINT16_SALVA:
+    push AX    
+     
+LER_UINT16_LEITURA:       
+    call LER_CHAR           
+     
+    cmp AL, CR              
+    jz LER_UINT16_FIM         
+      
+    cmp AL, '0'             
+    jb LER_UINT16_LEITURA 
+  
+    cmp AL, '9'
+    ja LER_UINT16_LEITURA 
+  
+    mov DL, AL      
+    call ESC_CHAR
+  
+    mov CL, AL      
+    sub CL, '0'     
+    
+    pop AX           
+    
+    mul BX          
+    add AX,CX
+    
+    jmp LER_UINT16_SALVA
+
+LER_UINT16_FIM: 
+    pop AX           
+         
+         
+    mov DL, CR               
+    call ESC_CHAR
+    mov DL, LF             
+    call ESC_CHAR
+
+   
+    pop DX
+    pop CX
+    pop BX
+              
+    ret
+endp 
+
+  COPIAVETOR16 proc
+       push DI
+       push SI
+       push CX      
+       push AX
+       LACO:  
+         mov AX, [SI]
+         mov [DI], AX 
+         add DI, 2
+         add SI, 2
+         loop LACO 
+       pop DI
+       pop SI
+       pop AX 
+       pop CX   
+       ret
+    endp
+     
+INICIO:  
+    mov AX, @DATA
+    mov DS, AX 
+   
+    
+    mov BX, offset origem 
+    mov CX, 5   
+                   
+    LACO_PRINCIPAL:                         
+       call LER_UINT16
+       mov [BX], AX   
+       add BX, 2
+       loop LACO_PRINCIPAL 
+ 
+    mov SI, offset origem
+    mov DI, offset destino 
+    mov CX, 5
+    call COPIAVETOR16
+    
+    mov CX, 5 
+    mov SI, offset destino
+    ESCREVE_VETOR:
+        mov AX, [SI]
+        call ESC_UINT16 
+        add SI, 2   
+        mov DL, CR                
+        call ESC_CHAR
+        mov DL, LF             
+        call ESC_CHAR
+        loop ESCREVE_VETOR 
+        
+  
+    mov ah, 4ch   
+    int 21h
+ end INICIO     
